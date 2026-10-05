@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Model results{% endblock %}
+{% block main %}
+<div class="intro">
+  <h1>Model results</h1>
+  <p>Trained on time steps 1 to 34 and scored once on steps 35 to 49: {{ "{:,}".format(charts.counts.test_labelled) }} labelled test transactions, {{ "{:,}".format(charts.counts.test_illicit) }} of them illicit. Every threshold was fixed on out-of-fold training predictions before the test period was scored. The headline model is {{ model_names[headline] }}.</p>
+</div>
+<section class="panel" aria-labelledby="bench-title">
+  <h2 id="bench-title">Benchmarks</h2>
+  <table class="bench">
+    <thead><tr><th>Benchmark</th><th class="num">Target</th><th class="num">Achieved</th><th class="num">95% interval</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for b in charts.benchmarks %}
+      {% set share = 'negatives' in b.name %}
+      <tr>
+        <td>{{ b.name }}</td>
+        <td class="num">{{ b.target|metric(share) }}</td>
+        <td class="num">{{ b.achieved|metric(share) }}</td>
+        <td class="num">{{ b.low|metric(share) }} to {{ b.high|metric(share) }}</td>
+        <td><span class="status {{ 'met' if b.met else 'missed' }}"><svg viewBox="0 0 12 12" aria-hidden="true">{% if b.met %}<circle cx="6" cy="6" r="5"/>{% else %}<path d="M6 1 L11 11 L1 11 Z"/>{% endif %}</svg>{{ 'Met' if b.met else 'Missed' }}</span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</section>
+<div class="pair">
+  <section class="panel" aria-labelledby="roc-title">
+    <h2 id="roc-title">ROC on the test period</h2>
+    <div id="roc" class="chart"></div>
+    <details><summary>Areas as a table</summary>
+      <table><thead><tr><th>Model</th><th class="num">AUC-ROC</th><th class="num">PR-AUC</th></tr></thead><tbody>
+      {% for key, name in model_names.items() %}<tr><td>{{ name }}</td><td class="num">{{ charts.roc[key].area|metric }}</td><td class="num">{{ charts.pr[key].area|metric }}</td></tr>{% endfor %}
+      </tbody></table>
+    </details>
+  </section>
+  <section class="panel" aria-labelledby="pr-title">
+    <h2 id="pr-title">Precision and recall</h2>
+    <div id="pr" class="chart"></div>
+  </section>
+</div>
+<section class="panel" aria-labelledby="step-title">
+  <h2 id="step-title">Illicit F1 by time step</h2>
+  <p class="caption">Every model collapses after the dark-market shutdown at step 43, when illicit activity changes character. No validation scheme inside steps 1 to 34 can anticipate it.</p>
+  <div id="per-step" class="chart"></div>
+  <details><summary>F1 by step as a table</summary>
+    <table><thead><tr><th>Step</th><th class="num">Illicit</th>{% for key, name in model_names.items() %}<th class="num">{{ name }}</th>{% endfor %}</tr></thead><tbody>
+    {% for step in charts.per_step.steps %}{% set i = loop.index0 %}<tr><td>{{ step }}</td><td class="num">{{ charts.per_step.illicit[i] }}</td>{% for key in model_names %}<td class="num">{{ charts.per_step.f1[key][i]|metric }}</td>{% endfor %}</tr>{% endfor %}
+    </tbody></table>
+  </details>
+</section>
+<div class="pair">
+  <section class="panel" aria-labelledby="fn-title">
+    <h2 id="fn-title">Missed illicit transactions</h2>
+    <div id="fn" class="chart"></div>
+    <table><thead><tr><th>Model</th><th class="num">Own threshold</th><th class="num">At Random Forest's precision</th></tr></thead><tbody>
+    {% for key, name in model_names.items() %}<tr><td>{{ name }}</td><td class="num">{{ charts.fn[key].own }}</td><td class="num">{{ charts.fn[key].matched if charts.fn[key].matched is not none else 'n/a' }}</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+  <section class="panel" aria-labelledby="abl-title">
+    <h2 id="abl-title">What focal loss and balanced sampling add</h2>
+    <div id="ablation" class="chart"></div>
+    <table><thead><tr><th>GraphSAGE trained with</th><th class="num">OOF PR-AUC</th><th class="num">Test PR-AUC</th><th class="num">Test F1</th><th class="num">Test recall</th></tr></thead><tbody>
+    {% for a in charts.ablation %}<tr><td>{{ a.label }}</td><td class="num">{{ a.oof_pr_auc|metric }}</td><td class="num">{{ a.test_pr_auc|metric }}</td><td class="num">{{ a.test_f1|metric }}</td><td class="num">{{ a.test_recall|metric }}</td></tr>{% endfor %}
+    </tbody></table>
+  </section>
+</div>
+<section class="panel" aria-labelledby="contrast-title">
+  <h2 id="contrast-title">Temporal split against a random split</h2>
+  <p class="caption">The same pipeline scored on a stratified random split of the same size. Random splits put transactions from the same time step on both sides, so they flatter every model; the temporal numbers above are the honest ones.</p>
+  <div id="contrast" class="chart"></div>
+  <details><summary>Every metric as a table</summary>
+    <table><thead><tr><th>Model</th><th>Metric</th><th class="num">Temporal</th><th class="num">Random</th><th class="num">Gap</th></tr></thead><tbody>
+    {% for c in charts.contrast %}<tr><td>{{ model_names[c.model] }}</td><td>{{ c.metric }}</td><td class="num">{{ c.temporal|metric }}</td><td class="num">{{ c.random|metric }}</td><td class="num">{{ (c.random - c.temporal)|metric }}</td></tr>{% endfor %}
+    </tbody></table>
+  </details>
+</section>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='model.js') }}"></script>{% endblock %}

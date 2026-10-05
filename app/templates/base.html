@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{% block title %}{% endblock %} | Elliptic GNN Risk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+</head>
+<body>
+<header class="masthead">
+  <a class="brand" href="{{ url_for('console') }}">
+    <svg class="glyph" viewBox="0 0 24 24" aria-hidden="true"><path d="M5 17 L12 6 L19 15" /><circle cx="5" cy="17" r="2.6" /><circle cx="12" cy="6" r="2.6" /><circle cx="19" cy="15" r="2.6" /></svg>
+    Elliptic GNN Risk
+  </a>
+  <nav aria-label="Pages">
+    <a href="{{ url_for('console') }}"{% if active == 'console' %} aria-current="page"{% endif %}>Console</a>
+    <a href="{{ url_for('model_page') }}"{% if active == 'model' %} aria-current="page"{% endif %}>Model</a>
+  </nav>
+  <p class="headline-model">Scoring with <strong>{{ model_names[headline] }}</strong></p>
+</header>
+<main>
+{% block main %}{% endblock %}
+</main>
+<footer class="attribution">
+  <p>Data: Elliptic Data Set (Elliptic, www.elliptic.co; Weber et al., "Anti-Money Laundering in Bitcoin: Experimenting with Graph Convolutional Networks for Financial Forensics", KDD 2019 Workshop on Anomaly Detection in Finance), licensed CC BY-NC-ND 4.0. Every transaction shown comes from the held-out test period, time steps 35 to 49. Raw feature values appear only for a transaction's top drivers, unmodified.</p>
+</footer>
+<script id="page-data" type="application/json">{{ data|tojson }}</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js" integrity="sha512-vc58qvvBdrDR4etbxMdlTt4GBQk1qjvyORR2nrsPsFPyrs+/u5c3+1Ct6upOgdZoIl7eq6k3a1UPDSNAQi/32A==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="{{ url_for('static', filename='charts.js') }}"></script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+{% block title %}Risk console{% endblock %}
+{% block main %}
+<div class="intro">
+  <h1>Transaction risk console</h1>
+  <p>Score any transaction from the held-out test period, or describe a new one linked to existing transactions and score it in real time. Scores come from the {{ model_names[headline] }} model, whose threshold was fixed on training-period predictions before the test period was scored.</p>
+</div>
+<div class="workspace">
+  <section class="rail panel" aria-label="Find a transaction">
+    <form id="lookup" autocomplete="off">
+      <label for="tx-input">Transaction id</label>
+      <div class="inline">
+        <input id="tx-input" class="id-input" type="text" inputmode="numeric" spellcheck="false">
+        <button type="submit">Score</button>
+      </div>
+    </form>
+    <p class="rail-label">Or pick one at random</p>
+    <div class="samples">
+      <button type="button" class="ghost sample" data-label="illicit">Illicit</button>
+      <button type="button" class="ghost sample" data-label="licit">Licit</button>
+      <button type="button" class="ghost sample" data-label="unknown">Unlabelled</button>
+    </div>
+    <p id="message" class="message" role="status" aria-live="polite"></p>
+  </section>
+  <section id="result" class="result panel" aria-label="Score" hidden>
+    <div class="score-head">
+      <div class="score-figure">
+        <p id="risk-value" class="risk-figure"></p>
+        <p class="risk-label">risk of being illicit</p>
+        <div id="risk-meter" class="meter" aria-hidden="true"><span class="fill"></span><span class="tick"></span></div>
+        <p id="risk-caption" class="caption"></p>
+      </div>
+      <dl id="tx-meta" class="facts"></dl>
+    </div>
+    <h2>Neighbourhood, up to two hops</h2>
+    <div id="graph" class="chart graph"></div>
+    <p id="graph-note" class="caption"></p>
+    <div class="split">
+      <div>
+        <h2>What pushed the hybrid score</h2>
+        <div id="drivers" class="chart"></div>
+        <details>
+          <summary>Drivers as a table</summary>
+          <table id="drivers-table"></table>
+        </details>
+      </div>
+      <div>
+        <h2>Every model's score</h2>
+        <div id="scores" class="chart"></div>
+      </div>
+    </div>
+  </section>
+</div>
+<div class="workspace lower">
+  <section class="panel" aria-labelledby="new-title">
+    <h2 id="new-title">Score a new transaction</h2>
+    <form id="new-form" autocomplete="off">
+      <div class="fields-3">
+        <div>
+          <label for="new-step">Time step</label>
+          <select id="new-step"></select>
+        </div>
+        <div>
+          <label for="new-inputs">Spends from (input ids)</label>
+          <input id="new-inputs" class="id-input" type="text" spellcheck="false">
+        </div>
+        <div>
+          <label for="new-outputs">Pays to (output ids)</label>
+          <input id="new-outputs" class="id-input" type="text" spellcheck="false">
+        </div>
+      </div>
+      <fieldset id="new-fields">
+        <legend>The eight raw features the hybrid model leans on most</legend>
+      </fieldset>
+      <p class="caption">The other 157 raw features start at their test-period medians. Ids are comma separated, must exist in the chosen time step, and there can be at most {{ data.max_links }} in total.</p>
+      <button type="submit">Score new transaction</button>
+    </form>
+  </section>
+  <section class="panel" aria-labelledby="api-title">
+    <h2 id="api-title">REST API</h2>
+    <pre class="code">curl "{{ base_url }}/api/transactions/sample?label=illicit"
+curl "{{ base_url }}/api/transactions/TX_ID"
+curl -X POST "{{ base_url }}/api/score" \
+  -H "Content-Type: application/json" \
+  -d @transaction.json</pre>
+    <p class="caption">A scoring request is a JSON object with <code>time_step</code> (35 to 49), <code>features</code> (165 numbers in dataset order, or an object keyed <code>local_1</code> to <code>local_93</code> and <code>agg_1</code> to <code>agg_72</code>), and <code>inputs</code> and <code>outputs</code> (ids of existing transactions in that step). The response carries the risk, the flag, the top drivers, the neighbourhood and the server-side latency.</p>
+  </section>
+</div>
+{% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='console.js') }}"></script>{% endblock %}
