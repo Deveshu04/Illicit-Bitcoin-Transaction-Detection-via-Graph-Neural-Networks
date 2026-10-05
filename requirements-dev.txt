@@ -1,0 +1,9 @@
+numpy
+scipy
+networkx
+lightgbm
+flask
+pytest
+jupytext
+huggingface_hub
+psutil

@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.claude/
+.superpowers/
+kaggle_out/
+docs/
+app/artifacts/
+notebooks/*/*.py
