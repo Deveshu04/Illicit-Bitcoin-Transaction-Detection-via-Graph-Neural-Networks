@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: deveshu-elliptic-gnn
+    runtime: docker
+    plan: free
+    dockerfilePath: ./app/Dockerfile
+    dockerContext: ./app
+    healthCheckPath: /api/health
+    envVars:
+      - key: ARTIFACT_REPO
+        value: deveshu/elliptic-gnn-artifacts
+      - key: HF_TOKEN
+        sync: false
