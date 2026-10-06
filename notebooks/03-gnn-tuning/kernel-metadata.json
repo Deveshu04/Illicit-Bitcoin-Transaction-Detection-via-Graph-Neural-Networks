@@ -1,0 +1,15 @@
+{
+  "id": "deveshupathak/elliptic-gnn-03-gnn-tuning",
+  "title": "Elliptic GNN 03 GNN Tuning",
+  "code_file": "03-gnn-tuning.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": ["deveshupathak/elliptic-gnn-02-features"],
+  "model_sources": []
+}

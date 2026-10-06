@@ -1,0 +1,15 @@
+{
+  "id": "deveshupathak/elliptic-gnn-04-gnn-training",
+  "title": "Elliptic GNN 04 GNN Training",
+  "code_file": "04-gnn-training.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": ["deveshupathak/elliptic-gnn-02-features", "deveshupathak/elliptic-gnn-03-gnn-tuning"],
+  "model_sources": []
+}

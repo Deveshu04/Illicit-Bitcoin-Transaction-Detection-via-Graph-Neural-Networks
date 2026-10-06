@@ -1,0 +1,15 @@
+{
+  "id": "deveshupathak/elliptic-gnn-06-random-contrast",
+  "title": "Elliptic GNN 06 Random Contrast",
+  "code_file": "06-random-contrast.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": true,
+  "enable_gpu": false,
+  "enable_tpu": false,
+  "enable_internet": true,
+  "dataset_sources": [],
+  "competition_sources": [],
+  "kernel_sources": ["deveshupathak/elliptic-gnn-02-features", "deveshupathak/elliptic-gnn-03-gnn-tuning", "deveshupathak/elliptic-gnn-05-evaluation"],
+  "model_sources": []
+}
