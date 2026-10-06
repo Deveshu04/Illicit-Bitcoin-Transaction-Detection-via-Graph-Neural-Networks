@@ -138,7 +138,7 @@ The full pipeline needs about 12 to 13.5 hours of CPU per pass, beyond Kaggle's 
 
 **Float64 training.** Kaggle assigns AMD and Intel machines at random, and their float32 kernels round differently; over 80 epochs that grew into visibly different scores between two runs of the same notebook. In float64, an 80-epoch model gave results identical to every printed digit on Intel and AMD, so every GraphSAGE notebook trains in float64 and accepts the slower training.
 
-**CPU-only tuning.** No GPU was used. The search space was narrowed after a timing check (hidden size 32 or 64, at most 80 epochs) and a median pruner stopped 7 of the 30 trials early, six after the first fold and one after the fourth; the study still took 7.2 hours.
+**CPU-only tuning.** No GPU was used. The search space was narrowed after a timing check (hidden size 32 or 64, at most 80 epochs) and a median pruner stopped six of the 30 trials after two of the five folds (a seventh was pruned only after all five, which saved nothing); the study still took 7.2 hours.
 
 **NumPy and NetworkX at serving time.** The app reimplements GraphSAGE inference in NumPy and recomputes graph features with the same code the notebooks used, so the container needs no PyTorch. On 200 real test-period transactions, tests require the app to reproduce the notebooks' GraphSAGE logits to within 1e-4 and the hybrid's scores to within 1e-6; on the final bundle the largest logit difference is 0.
 
