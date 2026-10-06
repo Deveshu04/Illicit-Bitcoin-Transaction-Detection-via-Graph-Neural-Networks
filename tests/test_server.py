@@ -113,3 +113,23 @@ def test_metric_filter():
     assert server.metric(0.96234) == "0.962"
     assert server.metric(0.2213, share=True) == "22.1%"
     assert server.metric(None) == "n/a"
+
+
+def test_oversized_body_is_rejected_as_json(client):
+    out = client.post("/api/score", data="[" + "0.5, " * 30000 + "0.5]", content_type="application/json")
+    assert out.status_code == 413 and "error" in strict_loads(out.get_data(as_text=True))
+
+
+def test_deeply_nested_body_is_400(client):
+    out = client.post("/api/score", data="[" * 5000 + "]" * 5000, content_type="application/json")
+    assert out.status_code == 400 and "JSON object" in strict_loads(out.get_data(as_text=True))["error"]
+
+
+def test_bare_api_path_is_json_404(client):
+    out = client.get("/api")
+    assert out.status_code == 404 and out.is_json
+
+
+def test_console_examples_follow_forwarded_https(client):
+    html = client.get("/", headers={"X-Forwarded-Proto": "https", "X-Forwarded-Host": "risk.example.org"}).get_data(as_text=True)
+    assert 'curl "https://risk.example.org/api/transactions/sample?label=illicit"' in html

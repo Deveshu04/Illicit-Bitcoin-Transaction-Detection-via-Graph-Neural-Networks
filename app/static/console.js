@@ -12,6 +12,9 @@ function say(text) {
 
 async function getJSON(url, options) {
   const response = await fetch(url, options);
+  if (!(response.headers.get("Content-Type") || "").includes("json")) {
+    throw new Error(`the server answered with status ${response.status} and no data; a sleeping instance takes about a minute to wake, so try again shortly`);
+  }
   const body = await response.json();
   if (!response.ok) throw new Error(body.error || `request failed with status ${response.status}`);
   return body;
@@ -211,7 +214,8 @@ async function scoreNew(event) {
   event.preventDefault();
   const features = DATA.raw_names.map((name) => DATA.medians[name]);
   DATA.form_features.forEach((name) => {
-    features[DATA.raw_names.indexOf(name)] = Number(byId(`f-${name}`).value);
+    const text = byId(`f-${name}`).value.trim();
+    if (text) features[DATA.raw_names.indexOf(name)] = Number(text);
   });
   const body = {
     time_step: Number(byId("new-step").value),
@@ -245,6 +249,7 @@ function buildForm() {
     input.type = "number";
     input.step = "any";
     input.value = String(DATA.medians[name]);
+    input.placeholder = String(DATA.medians[name]);
     wrap.append(label, input);
     fields.append(wrap);
   });

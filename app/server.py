@@ -6,6 +6,7 @@ import numpy as np
 from flask import Flask, jsonify, render_template, request
 from flask.json.provider import DefaultJSONProvider
 from werkzeug.exceptions import HTTPException
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 from artifacts import ensure_artifacts, hub_download
 from scoring import MAX_LINKS, NotFoundError, Scorer, ValidationError
@@ -39,6 +40,8 @@ def create_app(artifact_dir=None):
     charts = json.loads((artifact_dir / "charts.json").read_text(encoding="utf-8"))
     meta = scorer.meta
     app = App(__name__)
+    app.config["MAX_CONTENT_LENGTH"] = 64 * 1024
+    app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
     app.add_template_filter(metric, "metric")
     rng = np.random.default_rng()
     common = {"headline": scorer.headline, "model_names": meta["model_names"]}
@@ -76,7 +79,11 @@ def create_app(artifact_dir=None):
 
     @app.post("/api/score")
     def score():
-        return jsonify(scorer.score_new(request.get_json(silent=True)))
+        try:
+            body = request.get_json(silent=True)
+        except RecursionError:
+            body = None
+        return jsonify(scorer.score_new(body))
 
     @app.errorhandler(ValidationError)
     def bad_request(error):
@@ -88,7 +95,7 @@ def create_app(artifact_dir=None):
 
     @app.errorhandler(HTTPException)
     def http_error(error):
-        if request.path.startswith("/api/"):
+        if request.path == "/api" or request.path.startswith("/api/"):
             return jsonify(error=error.description), error.code
         return error
 

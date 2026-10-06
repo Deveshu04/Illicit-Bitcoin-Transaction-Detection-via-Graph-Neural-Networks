@@ -1,9 +1,4 @@
-numpy
-scipy
-networkx
-lightgbm
-flask
-pytest
-jupytext
-huggingface_hub
-psutil
+-r app/requirements.txt
+pytest==9.1.1
+jupytext==1.19.6
+psutil==7.2.2

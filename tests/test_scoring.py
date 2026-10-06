@@ -109,6 +109,8 @@ def put(index, value):
     (put(0, float("nan")), "finite"),
     (put(0, float("inf")), "finite"),
     (put(0, 1e300), "32-bit"),
+    (put(0, 10 ** 400), "32-bit"),
+    (lambda b: b.update(features={n: (10 ** 400 if n == "local_1" else 0.0) for n in RAW}), "32-bit"),
     (lambda b: b.update(features={"local_1": 1.0}), "missing 164 features"),
     (lambda b: b.update(features={**{n: 0.0 for n in RAW}, "bogus": 1.0}), "unknown feature names: bogus"),
     (lambda b: b.update(features="abc"), "features must be a list or an object"),

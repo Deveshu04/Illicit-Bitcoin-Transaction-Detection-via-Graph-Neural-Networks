@@ -189,7 +189,10 @@ class Scorer:
             raise ValidationError("features must be a list or an object keyed by feature name")
         if any(isinstance(v, bool) or not isinstance(v, (int, float)) for v in values):
             raise ValidationError("features must be numbers")
-        raw = np.array(values, dtype=float)
+        try:
+            raw = np.array(values, dtype=float)
+        except OverflowError:
+            raise ValidationError("features must fit in 32-bit floats") from None
         if not np.isfinite(raw).all():
             raise ValidationError("features must be finite numbers")
         with np.errstate(over="ignore"):

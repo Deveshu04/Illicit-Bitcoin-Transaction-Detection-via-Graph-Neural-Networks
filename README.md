@@ -26,10 +26,12 @@ Every model on the same test period:
 
 What the numbers say:
 
-- The hybrid is the strongest model on every ranking metric and on F1. Against the tuned Random Forest it lifts F1 from 0.690 to 0.819 and precision from 0.646 to 0.954, cutting false positives from 440 to 37.
-- It does not miss fewer illicit transactions. The Random Forest's out-of-fold threshold flags far more transactions once the test period drifts, which buys it 26 fewer misses at the cost of 403 more false alarms. At matched precision the two miss about the same number.
-- For context, the best published strict temporal results on Elliptic are a Random Forest at F1 0.821 and GraphSAGE at 0.689 ([Re-Evaluation of GNNs for Bitcoin Fraud Detection under Temporal Distribution Shift, 2026](https://arxiv.org/abs/2604.19514)). The hybrid here matches the best of them; GraphSAGE alone lands near the published GraphSAGE.
+- The hybrid is the strongest model on every ranking metric and on F1. Against the tuned Random Forest the fair measure is the threshold-free one: AUC-ROC 0.950 against 0.928 and PR-AUC 0.818 against 0.791. That gap is real but modest.
+- Most of the F1 gap (0.819 against 0.690) comes from the Random Forest's threshold, not its ranking. Its out-of-fold threshold of 0.30 transfers badly once the test period drifts: it flags far more transactions, which buys 26 fewer misses at the cost of 403 more false alarms. At a plain 0.5 cut-off, which nothing in the training period would have chosen, the same Random Forest reaches F1 0.811.
+- With its threshold set to match the Random Forest's out-of-fold precision, the hybrid misses 286 illicit transactions against 281, while its test precision stays at 0.888 against 0.646.
+- For context, a recent strict temporal re-evaluation of Elliptic reports a Random Forest at F1 0.821 and GraphSAGE at 0.689 ([Re-Evaluation of GNNs for Bitcoin Fraud Detection under Temporal Distribution Shift, 2026](https://arxiv.org/abs/2604.19514)). The hybrid here is level with that Random Forest; GraphSAGE alone lands below the published GraphSAGE.
 - The test period contains a regime change. On steps 35 to 42 the hybrid's F1 is 0.905; from step 43, after a dark-market shutdown, every model's F1 falls below 0.04. No validation inside the training period can anticipate it.
+- The intervals resample test transactions independently. Transactions in the same time step share a graph and a market regime, so the true uncertainty is wider than the intervals suggest.
 
 ![Illicit F1 by test time step](assets/f1_by_step.png)
 
@@ -44,7 +46,7 @@ Many published Elliptic results use a random split of labelled transactions. Not
 | Random Forest | 0.928 | 0.997 | 0.690 | 0.940 |
 | GraphSAGE alone | 0.892 | 0.991 | 0.614 | 0.913 |
 
-Under a random split every benchmark above is cleared easily, and the hybrid misses 37% fewer illicit transactions than the Random Forest. The split leaks: training transactions from the same time step sit next to test transactions in the graph and share their market regime, so models are graded on a future they have effectively seen. GraphSAGE gains most (F1 up 0.30) because message passing exploits exactly that leak. Every headline number in this project comes from the temporal split.
+Under a random split every benchmark above is cleared easily, and the hybrid misses 37% fewer illicit transactions than the Random Forest. The split leaks: training transactions from the same time step sit next to test transactions in the graph and share their market regime, so models are graded on a period they have effectively seen. GraphSAGE gains most (F1 up 0.30); this contrast alone does not show how much of that gain comes from its neighbours rather than from the shared regime. Every headline number in this project comes from the temporal split.
 
 ![The same pipeline under two protocols](assets/temporal_vs_random.png)
 
@@ -105,7 +107,7 @@ Each notebook runs on Kaggle's CPU and reads earlier notebooks' outputs as Kaggl
 
 ## Why seven chained notebooks instead of one
 
-The full pipeline needs 12 to 13 hours of CPU per pass, beyond Kaggle's 12-hour session limit, and a failure in a late cell of one notebook would throw away every hour before it. Chaining writes each stage's outputs once and lets later stages read them as inputs, so any stage reruns alone and a bug in training never costs the 7-hour tuning study; tuning and training are separate notebooks for exactly that reason. Each notebook also stays short enough to read as one argument, with every code cell between a markdown cell that states its aim and one that states the conclusion drawn from its output.
+The full pipeline needs about 12 to 13.5 hours of CPU per pass, beyond Kaggle's 12-hour session limit, and a failure in a late cell of one notebook would throw away every hour before it. Chaining writes each stage's outputs once and lets later stages read them as inputs, so any stage reruns alone and a bug in training never costs the 7-hour tuning study; tuning and training are separate notebooks for exactly that reason. Each notebook also stays short enough to read as one argument, with every code cell between a markdown cell that states its aim and one that states the conclusion drawn from its output.
 
 ## Design decisions
 
@@ -119,7 +121,7 @@ The full pipeline needs 12 to 13 hours of CPU per pass, beyond Kaggle's 12-hour 
 
 **GraphSAGE with jumping knowledge.** Two mean-aggregation SAGEConv layers feed a linear head on the concatenation of every layer's output, which keeps a transaction's own features visible next to its neighbourhood summary.
 
-**Focal loss and graph-aware sampling, measured.** Each epoch, every illicit training transaction is a seed with four licit ones sampled per illicit transaction, each node keeps at most 25 sampled neighbours per layer, and the loss is focal. The ablation retrained the same model four ways. On the test period, focal loss with balanced seeds is best (PR-AUC 0.667, F1 0.628), against 0.633 and 0.578 for plain cross-entropy; focal loss alone helps a little and balanced sampling alone hurts. The gain comes from the combination.
+**Focal loss and graph-aware sampling, measured.** Each epoch, every illicit training transaction is a seed with four licit ones sampled per illicit transaction, each node keeps at most 25 sampled neighbours per layer, and the loss is focal. The ablation retrained the same model four ways. On the test period, focal loss with balanced seeds is best (PR-AUC 0.667, F1 0.628), against 0.633 and 0.578 for plain cross-entropy; focal loss alone helps a little and balanced sampling alone hurts. The gain comes from the combination. Each configuration was trained with one seed, so differences of a few hundredths may not survive a reseed.
 
 | GraphSAGE trained with | Out-of-fold PR-AUC | Test PR-AUC | Test F1 |
 |---|---|---|---|
@@ -134,11 +136,11 @@ The full pipeline needs 12 to 13 hours of CPU per pass, beyond Kaggle's 12-hour 
 
 **False negatives at matched precision.** A model can always miss fewer illicit transactions by flagging more of them, so the comparison is also reported with each model's threshold set to match the Random Forest's out-of-fold precision.
 
-**Float64 training.** Kaggle assigns AMD and Intel machines at random, and their float32 kernels round differently; over 80 epochs that grew into visibly different scores between two runs of the same notebook. In float64, an 80-epoch model gave byte-identical results on Intel and AMD, so every GraphSAGE notebook trains in float64 at about 1.6 times the cost.
+**Float64 training.** Kaggle assigns AMD and Intel machines at random, and their float32 kernels round differently; over 80 epochs that grew into visibly different scores between two runs of the same notebook. In float64, an 80-epoch model gave results identical to every printed digit on Intel and AMD, so every GraphSAGE notebook trains in float64 and accepts the slower training.
 
-**CPU-only tuning.** No GPU was used. The search space was narrowed after a timing check (hidden size 32 or 64, at most 80 epochs) and a median pruner stopped weak trials after one or two folds; the study still took 7.2 hours.
+**CPU-only tuning.** No GPU was used. The search space was narrowed after a timing check (hidden size 32 or 64, at most 80 epochs) and a median pruner stopped 7 of the 30 trials early, six after the first fold and one after the fourth; the study still took 7.2 hours.
 
-**NumPy and NetworkX at serving time.** The app reimplements GraphSAGE inference in NumPy and recomputes graph features with the same code the notebooks used, so the container needs no PyTorch. Tests confirm the app reproduces the notebooks' GraphSAGE logits exactly and the hybrid's scores to within 1e-6.
+**NumPy and NetworkX at serving time.** The app reimplements GraphSAGE inference in NumPy and recomputes graph features with the same code the notebooks used, so the container needs no PyTorch. On 200 real test-period transactions, tests require the app to reproduce the notebooks' GraphSAGE logits to within 1e-4 and the hybrid's scores to within 1e-6; on the final bundle the largest logit difference is 0.
 
 **Scoring a new transaction.** A new transaction is inserted into its time step's graph with its inputs and outputs; its own graph features and GraphSAGE logit are computed exactly, while its neighbours' GraphSAGE scores come from the store, as a production cache would hold them.
 
@@ -157,16 +159,17 @@ The full pipeline needs 12 to 13 hours of CPU per pass, beyond Kaggle's 12-hour 
 
 1. Authenticate the Kaggle CLI; the dataset needs no rules acceptance.
 2. Create a Python 3.12 virtual environment and install `requirements-dev.txt`.
-3. Push and run the notebooks in order with the helper, waiting for each to finish:
+3. In each `notebooks/*/kernel-metadata.json`, replace the username in `id` and `kernel_sources` with your own Kaggle username.
+4. Push and run the notebooks in order with the helper, waiting for each to finish:
    ```bash
    python scripts/run_notebook.py push 02-features
    ```
-   `wait`, `fetch` and `compare` follow the same pattern, and `push --smoke` runs a quick check first.
-4. Copy notebook 07's `artifacts/` folder into `app/artifacts/` and run the tests:
+   `wait`, `fetch` and `compare` follow the same pattern, and `push --smoke` runs a quick check first. The helper pushes the committed `.ipynb` files as they are; Kaggle reruns them from the top.
+5. Copy notebook 07's `artifacts/` folder into `app/artifacts/` and run the tests:
    ```bash
    python -m pytest
    ```
-5. Run the app locally:
+6. Run the app locally:
    ```bash
    python -m flask --app "app/server.py:create_app()" run --port 7871
    ```
